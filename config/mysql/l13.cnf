@@ -1,0 +1,9 @@
+[mysqld]
+
+# Slow query settings:
+slow_query_log = 1
+general_log_file=/var/log/mysql/mysql.log
+general_log=1
+slow_query_log_file=/var/log/mysql/mysql-slow.log
+long_query_time=0.01
+log-queries-not-using-indexes=1

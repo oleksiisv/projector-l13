@@ -1,0 +1,90 @@
+services:
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_DATABASE: 'projector_l13'
+      MYSQL_USER: 'admin'
+      MYSQL_PASSWORD: 'admin123'
+      MYSQL_ROOT_PASSWORD: 'root123'
+    ports:
+      - '3308:3308'
+    expose:
+      - '3308'
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+      - ./config/mysql:/etc/mysql/conf.d/
+      - ./setup/mysql:/docker-entrypoint-initdb.d
+      - ./data/logs:/var/log/mysql/
+
+  elasticsearch:
+    image: elasticsearch:7.17.6
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms4096m -Xmx4096m"
+      - xpack.security.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+    volumes:
+      - ./data/elasticsearch:/usr/share/elasticsearch/data
+
+  filebeat:
+    hostname: filebeat
+    user: root
+    image: docker.elastic.co/beats/filebeat:8.4.3
+    volumes:
+      - ./config/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ./data/logs:/var/log/mysql/
+      - ./data/filebeat:/usr/share/filebeat/data/
+    command: filebeat -strict.perms=false
+    restart: on-failure
+
+#  kibana:
+#    image: kibana:8.4.3
+#    environment:
+#      - "ELASTICSEARCH_HOSTS=http://elasticsearch:9200"
+#    ports:
+#      - "5601:5601"
+#
+#  logstash:
+#    image: logstash:8.4.3
+#    ports:
+#      - "5044:5044"
+#      - "5050:5000/tcp"
+#      - "9600:9600"
+#    environment:
+#      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+#    volumes:
+#      - ./config/logstash/logstash.yml:/usr/share/logstash/config/logstash.yml:ro,z
+#      - ./config/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+
+  graylog:
+    image: graylog/graylog:4.3
+    environment:
+      - GRAYLOG_PASSWORD_SECRET=secretpasswordnotlessthan16symbols
+      - GRAYLOG_ROOT_PASSWORD_SHA2=ebfeebc8f1e9639e457f6d818bc560a607e10b1e84068a7ad803e34b91e8e8d6
+      - GRAYLOG_HTTP_EXTERNAL_URI=http://127.0.0.1:9000/
+    entrypoint: /usr/bin/tini -- wait-for-it elasticsearch:9200 --  /docker-entrypoint.sh
+#    volumes:
+#      - ./config/graylog/graylog.conf:/usr/share/graylog/data/config/graylog.conf
+    depends_on:
+      - mongo
+      - elasticsearch
+    ports:
+      - "9000:9000" # Graylog web interface and REST API
+      - "1514:1514" # Syslog TCP
+      - "1514:1514/udp" # Syslog UDP
+      - "12201:12201" # GELF TCP
+      - "12201:12201/udp" # GELF UDP
+      - "5045:5045" # BEATS TCP
+
+  mongo:
+    image: mongo:latest
+    volumes:
+      - ./data/mongo:/data/db
+    ports:
+      - "27017:27017"

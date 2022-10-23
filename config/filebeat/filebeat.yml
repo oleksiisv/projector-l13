@@ -1,0 +1,17 @@
+filebeat.modules:
+  - module: mysql
+    error:
+      enabled: true
+      var.paths: ["/var/log/mysql/error.log*"]
+    slowlog:
+      enabled: true
+      var.paths: ["/var/log/mysql/mysql-slow.log*"]
+
+#setup.dashboard.enabled: true
+#setup.kibana.host: "http://kibana:5601"
+#
+#output.elasticsearch:
+#  hosts: ["elasticsearch:9200"]
+
+#output.logstash:
+#  hosts: ["graylog:5045"]
